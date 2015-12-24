@@ -1,7 +1,8 @@
 (ns cljs-pdfkit.core
   (:require
    [cljs.nodejs :as nodejs]
-   [redlobster.stream :as stream])
+   [redlobster.stream :as stream]
+   [cljs-pdfkit.optimize-dom :as optimize-dom])
   (:require-macros [cljs-pdfkit.core :as core])
   )
 
@@ -10,19 +11,17 @@
 (nodejs/enable-util-print!)
 
 (declare handle-tag)
+(declare draw-tag)
 
 (defn page
-  [doc [page-tag opts & children]]
-  (assert (= :page page-tag))
+  [doc page]
   (let [
-        [opts children]
-        (if (map? opts)
-          [opts children]
-          [{} (if opts (conj children opts))])
+        [page-tag opts & children] (optimize-dom/add-style page)
+        _ (assert (= :page page-tag))
         opts (clj->js opts)
         ]
-    (doseq [child children]
-      (handle-tag doc child))))
+    (.addPage doc opts)
+    (handle-tag doc {} (optimize-dom/optimize-dom (vec (list* :style {} children))))))
 
 (defn pdf
   "Create a pdf with a vector of the form
@@ -36,27 +35,15 @@
   :Subject - \"Subject\"
   :Keywords - \"Keywords\"}
   "
-  [[pdf-tag opts & children]]
-  (assert (= :pdf pdf-tag))
+  [dom]
   (let [
-        [opts children]
-        (if (map? opts)
-          [opts children]
-          [{} (if opts (conj children opts))])
-        opts (clj->js {:info opts})
-        _ (prn opts)
+        [pdf-tag opts & children] (optimize-dom/add-style dom)
+        _ (assert (= :pdf pdf-tag))
+        opts (clj->js {:info (assoc opts :autoFirstPage false) :autoFirstPage false})
         doc (PDFDocument. opts)
         ]
-    (doseq [child (butlast children)]
-      (page doc child)
-      (.addPage doc))
-    (page doc (last children))
+    (doseq [child children] (page doc child))
     doc))
-
-(defn opts-children [[_ opts & children]]
-  (if (map? opts)
-    [opts children]
-    [{} (if opts (conj children opts))]))
 
 (defn linear-gradient [doc {[x1 y1 x2 y2] :points stops :stops}]
   (let [
@@ -74,7 +61,7 @@
       (.stop grad a color b))
     grad))
 
-(core/gen-set-style
+(core/gen-process-opts
  {:line-width lineWidth
   :line-cap lineCap
   :line-join lineJoin
@@ -86,37 +73,40 @@
   :fill-opacity fillOpacity
   :stroke-opacity strokeOpacity})
 
-(defmulti handle-tag (fn [_ [tag]] tag))
+(defn handle-tag [doc fill-opts [tag tag-opts & children :as v]]
+  (if (not-empty tag-opts) (.save doc))
+  (let [
+        fill-opts (merge fill-opts (process-opts doc tag-opts))
+        {:keys [fill-and-stroke linear-gradient radial-gradient]} fill-opts
+        ]
+    (draw-tag tag doc fill-opts children)
+    (cond
+     (= :style tag) nil ;don't need to close figure
+     fill-and-stroke (.fillAndStroke doc (first fill-and-stroke) (second fill-and-stroke))
+     linear-gradient (.fill doc linear-gradient)
+     radial-gradient (.fill doc radial-gradient)
+     :default (.stroke doc)
+     )
+    (if (not-empty tag-opts) (.restore doc))))
 
-(core/defhandle :rect [x y width height]
+(defmulti draw-tag identity)
+
+(defmethod draw-tag :rect [tag doc fill-opts [x y width height]]
   (.rect doc x y width height))
-(core/defhandle :rounded-rect [x y width height corner-radius]
+(defmethod draw-tag :rounded-rect [tag doc fill-opts [x y width height corner-radius]]
   (.roundedRect doc x y width height corner-radius))
-(core/defhandle :ellipse [x y radius-x radius-y]
+(defmethod draw-tag :ellipse [tag doc fill-opts [x y radius-x radius-y]]
   (.ellipse doc x y radius-x radius-y))
-(core/defhandle :circle [x y radius]
+(defmethod draw-tag :circle [tag doc fill-opts [x y radius]]
   (.circle doc x y radius))
-(defmethod handle-tag :polygon [doc [_ & points]]
-  (.apply (.-polygon doc) nil (clj->js points))
-  (.stroke doc))
-
-(defn main []
-  (println "in main"))
-
-(set! *main-cli-fn* main)
-
-(println "writing file")
-
-(defn test-pdf [form]
-  (let [doc (pdf form)]
-    (.pipe doc (stream/write-file "test.pdf"))
-    (.end doc)))
-
-(test-pdf
- [:pdf {:Title "Fred"
-        :Author "Ok"
-        :Subject "Mrr"
-        :Keywords "Wump"}
-  [:page
-   #_[:polygon [100 0] [50 100] [150 100]]]])
+(defmethod draw-tag :polygon [tag doc fill-opts points]
+  (.apply (.-polygon doc) doc (clj->js points)))
+(defmethod draw-tag :path [tag doc fill-opts [path]]
+  (.path doc stroke))
+(defmethod draw-tag :style [tag doc fill-opts children]
+  (doseq [child children]
+    (handle-tag doc fill-opts child)))
+(defmethod draw-tag :line [tag doc fill-opts [x1 y1 x2 y2]]
+  (.moveTo doc x1 y1)
+  (.lineTo doc x2 y2))
 

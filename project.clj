@@ -13,5 +13,5 @@
   :source-paths ["src" "target/classes"]
   :clean-targets ["out" "release"]
   :target-path "target"
-  :aliases {"build-node" ["trampoline" "run" "-m" "cljs-pdfkit.compile-node" "cljs-pdfkit.core"]}
+  :aliases {"build-node" ["trampoline" "run" "-m" "cljs-pdfkit.compile-node" "cljs-pdfkit.test"]}
   )
