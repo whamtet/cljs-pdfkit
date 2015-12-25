@@ -66,7 +66,6 @@
   :line-cap lineCap
   :line-join lineJoin
   :miter-limit miterLimit
-  :dash dash
   :fill-color fillColor
   :stroke-color strokeColor
   :opacity opacity
@@ -76,21 +75,25 @@
 (defn handle-tag [doc fill-opts [tag tag-opts & children :as v]]
   (if (not-empty tag-opts) (.save doc))
   (let [
-        fill-opts (merge fill-opts (process-opts doc tag-opts))
-        {:keys [fill-and-stroke linear-gradient radial-gradient]} fill-opts
+        fill-opts (merge-with #(or %1 %2) fill-opts (process-opts doc tag-opts))
+        {:keys [fill-and-stroke linear-gradient radial-gradient dash fill]} fill-opts
         ]
+    (prn tag fill)
     (draw-tag tag doc fill-opts children)
     (cond
-     (= :style tag) nil ;don't need to close figure
+     (#{:style :do} tag) nil ;don't need to close figure
      fill-and-stroke (.fillAndStroke doc (first fill-and-stroke) (second fill-and-stroke))
      linear-gradient (.fill doc linear-gradient)
      radial-gradient (.fill doc radial-gradient)
+     fill (.fill doc fill)
      :default (.stroke doc)
      )
     (if (not-empty tag-opts) (.restore doc))))
 
 (defmulti draw-tag identity)
 
+(defmethod draw-tag :do [tag doc fill-opts [child]]
+  (js/eval child))
 (defmethod draw-tag :rect [tag doc fill-opts [x y width height]]
   (.rect doc x y width height))
 (defmethod draw-tag :rounded-rect [tag doc fill-opts [x y width height corner-radius]]
@@ -102,7 +105,7 @@
 (defmethod draw-tag :polygon [tag doc fill-opts points]
   (.apply (.-polygon doc) doc (clj->js points)))
 (defmethod draw-tag :path [tag doc fill-opts [path]]
-  (.path doc stroke))
+  (.path doc path))
 (defmethod draw-tag :style [tag doc fill-opts children]
   (doseq [child children]
     (handle-tag doc fill-opts child)))

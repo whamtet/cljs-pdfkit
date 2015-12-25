@@ -8,8 +8,16 @@
   "transforms tree by applying f to vector elements"
   [f m]
   (cond
-   (vector? m) (if (some vector? m) (f (mapv #(postwalk f %) m)) m)
-   (seq? m) (throw (Exception. "Seqs not supported in dom"))
+   (vector? m) (if (some vector? m)
+                 (f (mapv #(postwalk f %) m)) m)
+   (seq? m) (throw (js/Error. "Seqs not supported in dom"))
+   :default m))
+
+(defn complete-postwalk
+  [f m]
+  (cond
+   (vector? m) (f (mapv #(complete-postwalk f %) m))
+   (seq? m) (throw (js/Error. "Seqs not supported in dom"))
    :default m))
 
 (defn add-style
@@ -47,7 +55,7 @@
 
 (defn percolate [[tag style & children :as v]]
   (let [
-        common-map (map-intersection (map second children))
+        common-map (dissoc (map-intersection (map second children)) :translate :rotate :scale)
         ]
     (if (empty? common-map)
       v
@@ -56,4 +64,4 @@
                   (map #(update-in % [1] map-difference common-map) children))))))
 
 (defn optimize-dom [m]
-  (reduce (fn [m f] (postwalk f m)) m [add-style refactor-tag percolate]))
+  (->> m (complete-postwalk add-style) (postwalk refactor-tag) (postwalk percolate)))
