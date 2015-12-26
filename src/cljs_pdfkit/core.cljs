@@ -2,7 +2,9 @@
   (:require
    [cljs.nodejs :as nodejs]
    [redlobster.stream :as stream]
-   [cljs-pdfkit.optimize-dom :as optimize-dom])
+   [cljs-pdfkit.optimize-dom :as optimize-dom]
+   [cljs-pdfkit.util :as util]
+   )
   (:require-macros [cljs-pdfkit.core :as core])
   )
 
@@ -12,6 +14,8 @@
 
 (declare handle-tag)
 (declare draw-tag)
+(def default-stack [{:font "Helvetica" :font-size 12}])
+(defn print-through [x] (println x) x)
 
 (defn page
   [doc page]
@@ -21,7 +25,7 @@
         opts (clj->js opts)
         ]
     (.addPage doc opts)
-    (handle-tag doc {} (optimize-dom/optimize-dom (vec (list* :style {} children))))))
+    (handle-tag doc default-stack (print-through (optimize-dom/optimize-dom (vec (list* :style {} children)))))))
 
 (defn pdf
   "Create a pdf with a vector of the form
@@ -30,22 +34,22 @@
 
   opts takes the form
 
-  {:Title \"Title of the Document\"
-  :Author \"Author\"
-  :Subject - \"Subject\"
-  :Keywords - \"Keywords\"}
+  {:title \"Title of the Document\"
+  :author \"Author\"
+  :subject - \"Subject\"
+  :keywords - \"Keywords\"}
   "
   [dom]
   (let [
         [pdf-tag opts & children] (optimize-dom/add-style dom)
         _ (assert (= :pdf pdf-tag))
-        opts (clj->js {:info (assoc opts :autoFirstPage false) :autoFirstPage false})
+        opts (clj->js {:info (util/capitalize-map opts) :autoFirstPage false})
         doc (PDFDocument. opts)
         ]
     (doseq [child children] (page doc child))
     doc))
 
-(defn linear-gradient [doc {[x1 y1 x2 y2] :points stops :stops}]
+(defn make-linear-gradient [doc {[x1 y1 x2 y2] :points stops :stops}]
   (let [
         grad (.linearGradient doc x1 y1 x2 y2)
         ]
@@ -53,7 +57,7 @@
       (.stop grad point color))
     grad))
 
-(defn radial-gradient [doc {[x1 y1 r1 x2 y2 r2] :points stops :stops}]
+(defn make-radial-gradient [doc {[x1 y1 r1 x2 y2 r2] :points stops :stops}]
   (let [
         grad (.radialGradient doc x1 y1 r1 x2 y2 r2)
         ]
@@ -61,55 +65,94 @@
       (.stop grad a color b))
     grad))
 
-(core/gen-process-opts
- {:line-width lineWidth
-  :line-cap lineCap
-  :line-join lineJoin
-  :miter-limit miterLimit
-  :fill-color fillColor
-  :stroke-color strokeColor
-  :opacity opacity
-  :fill-opacity fillOpacity
-  :stroke-opacity strokeOpacity})
+(core/gen-apply-state)
 
-(defn handle-tag [doc fill-opts [tag tag-opts & children :as v]]
-  (if (not-empty tag-opts) (.save doc))
+(defn apply-stack-frame [doc {:keys [font font-size]} save?]
+  (if save? (.save doc) (.restore doc))
+  (when font
+      (if (string? font)
+        (.font doc font)
+        (.font doc (first font) (second font))))
+  (when font-size (.fontSize doc font-size)))
+
+(defn handle-tag [doc stack [tag tag-opts & children :as v]]
   (let [
-        fill-opts (merge-with #(or %1 %2) fill-opts (process-opts doc tag-opts))
-        {:keys [fill-and-stroke linear-gradient radial-gradient dash fill]} fill-opts
+        state-opts (select-keys tag-opts optimize-dom/root-properties)
+        {:keys [fill-and-stroke linear-gradient radial-gradient fill dash translate rotate scale font font-size]} tag-opts
+        stack-frame (select-keys tag-opts optimize-dom/root-properties2)
+        new-stack (conj stack (merge (peek stack) stack-frame))
+        save-stack? (or (= :clip tag) (not-empty tag-opts))
         ]
-    (prn tag fill)
-    (draw-tag tag doc fill-opts children)
+    ;;apply state
+    (when save-stack? (apply-stack-frame doc stack-frame true))
+    (apply-state doc state-opts)
+
+    ;;apply transformations
+    (when dash (.dash doc (first dash) (clj->js (second dash))))
+    (when translate (.translate doc (first translate) (second translate)))
+    (when rotate (.rotate doc (first rotate) (clj->js (second rotate))))
+    (when scale
+      (let [[x y] (if (number? scale) [scale scale] scale)]
+        (.scale doc x y)))
+
+    ;;draw tag
+    (draw-tag tag doc new-stack tag-opts children)
+
+    ;;close tag if necessary
     (cond
-     (#{:style :do} tag) nil ;don't need to close figure
+     (#{:style :do :clip :text} tag) nil ;don't need to close figure
      fill-and-stroke (.fillAndStroke doc (first fill-and-stroke) (second fill-and-stroke))
-     linear-gradient (.fill doc linear-gradient)
-     radial-gradient (.fill doc radial-gradient)
-     fill (.fill doc fill)
+     linear-gradient (.fill doc (make-linear-gradient doc linear-gradient))
+     radial-gradient (.fill doc (make-radial-gradient doc radial-gradient))
+     fill (if (coll? fill) (.apply (.-fill doc) doc (clj->js fill)) (.fill doc fill))
      :default (.stroke doc)
      )
-    (if (not-empty tag-opts) (.restore doc))))
+
+    ;;restore state
+    (when save-stack? (apply-stack-frame doc (peek stack) false))
+    ))
 
 (defmulti draw-tag identity)
 
-(defmethod draw-tag :do [tag doc fill-opts [child]]
-  (js/eval child))
-(defmethod draw-tag :rect [tag doc fill-opts [x y width height]]
-  (.rect doc x y width height))
-(defmethod draw-tag :rounded-rect [tag doc fill-opts [x y width height corner-radius]]
-  (.roundedRect doc x y width height corner-radius))
-(defmethod draw-tag :ellipse [tag doc fill-opts [x y radius-x radius-y]]
-  (.ellipse doc x y radius-x radius-y))
-(defmethod draw-tag :circle [tag doc fill-opts [x y radius]]
-  (.circle doc x y radius))
-(defmethod draw-tag :polygon [tag doc fill-opts points]
-  (.apply (.-polygon doc) doc (clj->js points)))
-(defmethod draw-tag :path [tag doc fill-opts [path]]
-  (.path doc path))
-(defmethod draw-tag :style [tag doc fill-opts children]
+(core/gen-multimethods "note(x, y, width, height, contents, options)
+link(x, y, width, height, url, options)
+highlight(x, y, width, height, options)
+underline(x, y, width, height, options)
+strike(x, y, width, height, options)
+lineAnnotation(x1, y1, x2, y2, options)
+rectAnnotation(x, y, width, height, options)
+ellipseAnnotation(x, y, width, height, options)
+textAnnotation(x, y, width, height, text, options)")
+
+(defmethod draw-tag :image [tag doc stack opts [source x y opts]]
+  (.image doc source x y (clj->js opts)))
+(defmethod draw-tag :text [tag doc stack {:keys [move-down] :as opts} [text x y]]
+  (if x
+    (.text doc text x y (util/camelize-js opts))
+    (.text doc text (util/camelize-js opts)))
+  (if move-down (.moveDown doc move-down)))
+(defmethod draw-tag :clip [tag doc stack opts [[clip-tag clip-opts & clip-children] & children]]
+  (.clip (draw-tag clip-tag doc stack opts clip-children))
   (doseq [child children]
-    (handle-tag doc fill-opts child)))
-(defmethod draw-tag :line [tag doc fill-opts [x1 y1 x2 y2]]
+    (handle-tag doc stack child)))
+(defmethod draw-tag :do [tag doc stack opts [child]]
+  (js/eval child))
+(defmethod draw-tag :rect [tag doc stack opts [x y width height]]
+  (.rect doc x y width height))
+(defmethod draw-tag :rounded-rect [tag doc stack opts [x y width height corner-radius]]
+  (.roundedRect doc x y width height corner-radius))
+(defmethod draw-tag :ellipse [tag doc stack opts [x y radius-x radius-y]]
+  (.ellipse doc x y radius-x radius-y))
+(defmethod draw-tag :circle [tag doc stack opts [x y radius]]
+  (.circle doc x y radius))
+(defmethod draw-tag :polygon [tag doc stack opts points]
+  (.apply (.-polygon doc) doc (clj->js points)))
+(defmethod draw-tag :path [tag doc stack opts [path]]
+  (.path doc path))
+(defmethod draw-tag :style [tag doc stack opts children]
+  (doseq [child children]
+    (handle-tag doc stack child)))
+(defmethod draw-tag :line [tag doc stack opts [x1 y1 x2 y2]]
   (.moveTo doc x1 y1)
   (.lineTo doc x2 y2))
 

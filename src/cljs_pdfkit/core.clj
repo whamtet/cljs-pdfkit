@@ -1,23 +1,21 @@
-(ns cljs-pdfkit.core)
+(ns cljs-pdfkit.core
+  (:require [cljs-pdfkit.util :as util]
+            [cljs-pdfkit.optimize-dom :as optimize-dom]
+            ))
 
-(defmacro gen-process-opts [m]
-  `(defn ~'process-opts [~'doc ~'opts]
-     ~@(for [[k v] m]
-         `(if (~'opts ~k) (. ~'doc ~v (~'opts ~k))))
-     (when-let [[width# opts#] (~'opts :dash)]
-       (.dash ~'doc width# (~'clj->js opts#)))
-     (when-let [[x# y#] (~'opts :translate)]
-       (.translate ~'doc x# y#))
-     (when-let [[x# y#] (~'opts :rotate)]
-       (.rotate ~'doc x# (clj->js y#)))
-     (when-let [scale# (~'opts :scale)]
-       (let [
-             [x# y#] (if (number? scale#) [scale# scale#] scale#)
+(defmacro gen-apply-state []
+  `(defn ~'apply-state [~'doc ~'opts]
+     ~@(for [k optimize-dom/root-properties]
+         `(if (~'opts ~k) (. ~'doc ~(util/camelize k) (~'opts ~k))))))
+
+(defmacro gen-multimethods [s]
+  `(do
+     ~@(for [line (.split (.trim s) "\n")
+             :let [
+                   [_ func args] (re-find #"^([a-zA-Z]+)\(([a-z0-9, ]*)\)$" (.trim line))
+                   _ (assert (and func args) (pr-str line func args))
+                   args (mapv symbol (.split args ", "))
+                   ]
              ]
-         (.scale ~'doc x# y#)))
-     (merge (select-keys ~'opts [:fill :dash :fill-and-stroke])
-            {
-             :linear-gradient (if-let [x# (~'opts :linear-gradient)] (linear-gradient ~'doc x#))
-             :radial-gradient (if-let [x# (~'opts :radial-gradient)] (radial-gradient ~'doc x#))
-             }
-            )))
+         `(defmethod ~'draw-tag ~(keyword func) [tag# doc# stack# opts# ~args]
+            (. doc# ~(util/camelize func) ~@(butlast args) (~'clj->js ~(last args)))))))
