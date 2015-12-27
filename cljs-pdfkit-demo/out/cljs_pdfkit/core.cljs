@@ -76,6 +76,7 @@
 
 (defn handle-tag [doc stack [tag tag-opts & children :as v]]
   (let [
+        state-opts (select-keys tag-opts optimize-dom/root-properties)
         {:keys [fill-and-stroke linear-gradient radial-gradient fill dash translate rotate scale font font-size]} tag-opts
         stack-frame (select-keys tag-opts optimize-dom/root-properties2)
         new-stack (conj stack (merge (peek stack) stack-frame))
@@ -83,7 +84,7 @@
         ]
     ;;apply state
     (when save-stack? (apply-stack-frame doc stack-frame true))
-    (apply-state doc tag-opts)
+    (apply-state doc state-opts)
 
     ;;apply transformations
     (when dash (.dash doc (first dash) (clj->js (second dash))))
