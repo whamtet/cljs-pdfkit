@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>cljs-pdfkit in Action</title>
+    <style type="text/css" media="screen">
+      #editor {
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+      }
+      body, html {
+        height: 100%;
+      }
+    </style>
+  </head>
+  <body>
+
+    <div id="editor" style="width: 50%;">
+    </div>
+    <iframe src="/test.pdf" style="width: 50%; float: right; height: 100%" id="frame">
+
+    </iframe>
+
+    <script src="https://cdn.jsdelivr.net/g/ace@1.2.2(min/ace.js+min/mode-clojure.js+min/snippets/clojure.js+min/theme-clouds.js)" type="text/javascript" charset="utf-8"></script>
+    <script>
+      var editor = ace.edit("editor");
+      editor.setTheme("ace/theme/clouds");
+      editor.getSession().setMode("ace/mode/clojure");
+    </script>
+    <script>
+      var setText = function(text) { editor.setValue(text, 1)}
+      function get(url, f) {
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+          if (xhttp.readyState == 4 && xhttp.status == 200) {
+            f(xhttp.responseText);
+          }
+        };
+        xhttp.open("GET", url, true);
+        xhttp.send();
+      }
+
+      var refreshPdf = function() {
+        var text = editor.getValue()
+
+        var url = '/get-pdf?edn=' + text
+        document.getElementById('frame').src = url
+      };
+
+      editor.on("change", function(x) {
+        var action = x.action;
+        if (action == 'insert') {
+          refreshPdf();
+        }
+      })
+      get('/test.edn', function(x) {setText(x)});
+
+    </script>
+  </body>
+</html>
