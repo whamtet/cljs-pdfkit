@@ -1,3 +1,4 @@
+process.chdir('cljs-pdfkit-demo')
 var path = require("path");
 try {
     require("source-map-support").install();
