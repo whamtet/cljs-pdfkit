@@ -14,8 +14,8 @@
              :let [
                    [_ func args] (re-find #"^([a-zA-Z]+)\(([a-z0-9, ]*)\)$" (.trim line))
                    _ (assert (and func args) (pr-str line func args))
-                   args (mapv symbol (.split args ", "))
+                   args (mapv symbol (butlast (.split args ", ")))
                    ]
              ]
          `(defmethod ~'draw-tag ~(keyword func) [tag# doc# stack# opts# ~args]
-            (. doc# ~(util/camelize func) ~@(butlast args) (~'clj->js ~(last args)))))))
+            (. doc# ~(util/camelize func) ~@args (~'clj->js opts#))))))

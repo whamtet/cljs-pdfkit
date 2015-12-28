@@ -74,6 +74,7 @@
                        :strike
                        :align
                        :fill :fill-and-stroke :linear-gradient :radial-gradient
+                       :continued
                        }) ;these must be transferred down into children
 
 (def static-properties #{:translate :rotate :scale}) ;do not shift these ones

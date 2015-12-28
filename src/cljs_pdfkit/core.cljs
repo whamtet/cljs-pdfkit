@@ -16,6 +16,8 @@
 (declare draw-tag)
 (def default-stack [{:font "Helvetica" :font-size 12}])
 
+(defn print-through [x] (println x) x)
+
 (defn page
   [doc page]
   (let [
@@ -44,6 +46,7 @@
         _ (assert (= :pdf pdf-tag))
         opts (clj->js {:info (util/capitalize-map opts) :autoFirstPage false})
         doc (PDFDocument. opts)
+        children (remove seq? (tree-seq seq? identity children))
         ]
     (doseq [child children] (page doc child))
     doc))
@@ -140,7 +143,7 @@ textAnnotation(x, y, width, height, text, options)")
 (defmethod draw-tag :rounded-rect [tag doc stack opts [x y width height corner-radius]]
   (.roundedRect doc x y width height corner-radius))
 (defmethod draw-tag :ellipse [tag doc stack opts [x y radius-x radius-y]]
-  (.ellipse doc x y radius-x radius-y))
+  (.ellipse doc x y radius-x (or radius-y radius-x)))
 (defmethod draw-tag :circle [tag doc stack opts [x y radius]]
   (.circle doc x y radius))
 (defmethod draw-tag :polygon [tag doc stack opts points]
@@ -150,7 +153,18 @@ textAnnotation(x, y, width, height, text, options)")
 (defmethod draw-tag :style [tag doc stack opts children]
   (doseq [child children]
     (handle-tag doc stack child)))
+
 (defmethod draw-tag :line [tag doc stack opts [x1 y1 x2 y2]]
   (.moveTo doc x1 y1)
   (.lineTo doc x2 y2))
 
+(defmethod draw-tag :quadratic-curve [tag doc stack opts [x1 y1 x2 y2 x3 y3]]
+  (.moveTo doc x1 y1)
+  (.quadraticCurveTo doc x2 y2 x3 y3))
+
+(defmethod draw-tag :bezier-curve [tag doc stack opts [x1 y1 x2 y2 x3 y3 x4 y4]]
+  (.moveTo doc x1 y1)
+  (.bezierCurveTo doc x2 y2 x3 y3 x4 y4))
+
+(defmethod draw-tag :default [tag]
+  (throw (js/Error. (str tag " tag not supported"))))

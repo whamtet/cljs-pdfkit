@@ -11,6 +11,7 @@
   :plugins [[lein-npm "0.6.1"]]
   :npm {:dependencies [[source-map-support "0.3.2"]
                        [pdfkit "0.7.2"]
+                       [brfs "1.4.1"]
                        ]}
   :source-paths ["src" "target/classes"]
   :clean-targets ["out" "release"]
