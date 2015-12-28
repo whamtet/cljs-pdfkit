@@ -72,7 +72,8 @@ This sets a watch script that will recompile on source code changes.
 ### Fill and Stroke Styles
 
 ```clojure
-:line-width :line-cap :line-join :miter-limit :dash :fill-color :stroke-color :opacity :fill-opacity :stroke-opacity
+:line-width :line-cap :line-join :miter-limit :dash
+:fill-color :stroke-color :opacity :fill-opacity :stroke-opacity
 ```
 
 ### Style Elements
