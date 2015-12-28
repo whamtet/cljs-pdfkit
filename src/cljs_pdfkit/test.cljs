@@ -1,7 +1,7 @@
 (ns cljs-pdfkit.test
   (:require
    [cljs-pdfkit.core :as core]
-   [redlobster.stream :as stream]
+;   [redlobster.stream :as stream]
    [cljs-pdfkit.optimize-dom :as optimize-dom]
    [clojure.string :as string]
    ))
@@ -13,12 +13,13 @@
 
 (set! *main-cli-fn* main)
 
-(defn test-pdf [form]
+;;needed for testing
+#_(defn test-pdf [form]
   (let [doc (core/pdf form)]
     (.pipe doc (stream/write-file "test.pdf"))
     (.end doc)))
 
-(defn write-doc [doc]
+#_(defn write-doc [doc]
   (.pipe doc (stream/write-file "test.pdf"))
   (.end doc))
 

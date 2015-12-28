@@ -7,7 +7,7 @@
 ;;here we rearrange the dom to increase efficiency
 ;;and correctly apply fonts etc
 
-#?(:cljs (nodejs/enable-util-print!))
+#?(:cljs (if nodejs/enable-util-print! (nodejs/enable-util-print!)))
 
 (defn unravel-vector [v]
   (vec (mapcat #(remove seq? (tree-seq seq? identity %)) v)))

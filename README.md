@@ -7,7 +7,6 @@ Clojurescript wrapper around [pdfkit](http://pdfkit.org/) to generate pdfs in th
 [View Demo](https://cljs-pdfkit.herokuapp.com/index.html)
 
 ## Usage
-
 ```clojure
 (let [
       document
@@ -40,7 +39,7 @@ Add `[cljs-pdfkit "0.1.0-SNAPSHOT"]` and do `lein npm install`.  cljs-pdfkit can
 
 ```bash
 npm install -g browserify
-browserify -r pdfkit -r brfs -o bundle.js
+browserify -r pdfkit -r brfs -r blob-stream -o bundle.js
 ```
 
 Insert bundle.js before your clojurescript elements.  This enables cljs-pdfkit to require pdfkit as necessary.

@@ -1,7 +1,6 @@
 (ns cljs-pdfkit.core
   (:require
    [cljs.nodejs :as nodejs]
-   [redlobster.stream :as stream]
    [cljs-pdfkit.optimize-dom :as optimize-dom]
    [cljs-pdfkit.util :as util]
    )
@@ -10,7 +9,7 @@
 
 (def PDFDocument (js/require "pdfkit"))
 
-(nodejs/enable-util-print!)
+(if nodejs/enable-util-print! (nodejs/enable-util-print!))
 
 (declare handle-tag)
 (declare draw-tag)
