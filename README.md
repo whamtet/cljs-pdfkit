@@ -71,7 +71,9 @@ This sets a watch script that will recompile on source code changes.
 
 ### Fill and Stroke Styles
 
-**lineWidth** **lineCap** **lineJoin** **miterLimit** **dash** **fillColor** **strokeColor** **opacity** **fillOpacity** **strokeOpacity**
+```clojure
+:line-width :line-cap :line-join :miter-limit :dash :fill-color :stroke-color :opacity :fill-opacity :stroke-opacity
+```
 
 ### Style Elements
 
@@ -147,8 +149,11 @@ Use `fill-and-stroke` to set both at the same time
 Both linear and radial gradients are supported.
 
 ```clojure
-:linear-gradient {:points [x1 y1 x2 y2] :stops [[0 "green"] [1 "red"]]}
-:radial-gradient {:points [x1 y1 r1 x2 y2 r2] :stops [[0 "orange" 0] [1 "orange" 1]]}
+[:style {:translate [50 50]}
+ [:rect {:linear-gradient {:points [50 0 150 100] :stops [[0 "green"] [1 "red"]]}}
+  50 0 100 100]
+ [:circle {:radial-gradient {:points [300 50 0 300 50 50] :stops [[0 "orange" 0] [1 "orange" 1]]}}
+  300 50 50]]
 ```
 
 ![](doc/ex5.png)
@@ -213,9 +218,10 @@ The above shows how to control the order of transformations `:translate` and `:s
 
 ### Text Styles
 
-**line-break** **width** **height** **ellipsis** **columns** **column-gap** **indent** **paragraph-gap**
-**word-spacing** **character-spacing** **link** **underline** **strike** **align** **fill**
-**fill-and-stroke** **linear-gradient** **radial-gradient**
+```clojure
+:line-break :width :height :ellipsis :columns :column-gap :indent :paragraph-gap :word-spacing
+:character-spacing :link :underline :strike :align :fill :fill-and-stroke :linear-gradient :radial-gradient
+```
 
 Here is an example that wraps a paragraph into three columns
 
