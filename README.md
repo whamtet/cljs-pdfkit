@@ -11,11 +11,13 @@ Clojurescript wrapper around [pdfkit](http://pdfkit.org/) to generate pdfs in th
 (let [
       document
       (cljs-pdfkit.core/pdf
-       [:pdf {:title "My Document"
-              :author "Me"
-              :subject "Important Things"
-              :keywords "Wump"
-              }
+       [:pdf {:info
+               {:title "My Document"
+                :author "Me"
+                :subject "Important Things"
+                :keywords "Wump"
+                }
+              :layout "landscape"}
         [:page ...]
         [:page ...]])]
 
