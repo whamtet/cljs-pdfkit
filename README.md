@@ -14,7 +14,8 @@ Clojurescript wrapper around [pdfkit](http://pdfkit.org/) to generate pdfs in th
        [:pdf {:title "My Document"
               :author "Me"
               :subject "Important Things"
-              :keywords "Wump"}
+              :keywords "Wump"
+              }
         [:page ...]
         [:page ...]])]
 
@@ -53,6 +54,7 @@ Insert bundle.js before your clojurescript elements.  This enables cljs-pdfkit t
 ```bash
 git clone https://github.com/whamtet/cljs-pdfkit
 cd cljs-pdfkit
+lein npm install
 lein build
 ```
 

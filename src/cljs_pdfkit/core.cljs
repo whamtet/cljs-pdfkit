@@ -1,6 +1,5 @@
 (ns cljs-pdfkit.core
   (:require
-   [cljs.nodejs :as nodejs]
    [cljs-pdfkit.optimize-dom :as optimize-dom]
    [cljs-pdfkit.util :as util]
    )
@@ -9,8 +8,6 @@
 
 (def PDFDocument (js/require "pdfkit"))
 
-(if nodejs/enable-util-print! (nodejs/enable-util-print!))
-
 (declare handle-tag)
 (declare draw-tag)
 (def default-stack [{:font "Helvetica" :font-size 12}])
@@ -18,10 +15,11 @@
 (defn print-through [x] (println x) x)
 
 (defn page
-  [doc page]
+  [doc page pdf-opts]
   (let [
         [page-tag opts & children] (optimize-dom/add-style page)
         _ (assert (= :page page-tag))
+        opts (merge opts (select-keys pdf-opts [:layout]))
         opts (clj->js opts)
         ]
     (.addPage doc opts)
@@ -33,21 +31,22 @@
   [:pdf opts & pages]
 
   opts takes the form
-
-  {:title \"Title of the Document\"
-  :author \"Author\"
-  :subject - \"Subject\"
-  :keywords - \"Keywords\"}
+  {:info
+    {:title \"Title of the Document\"
+     :author \"Author\"
+     :subject - \"Subject\"
+     :keywords - \"Keywords\"}
+   :layout \"landscape\"}
   "
   [dom]
   (let [
         [pdf-tag opts & children] (optimize-dom/add-style dom)
         _ (assert (= :pdf pdf-tag))
-        opts (clj->js {:info (util/capitalize-map opts) :autoFirstPage false})
-        doc (PDFDocument. opts)
+        opts (assoc (update-in opts [:info] util/capitalize-map) :autoFirstPage false)
+        doc (PDFDocument. (clj->js opts))
         children (remove seq? (tree-seq seq? identity children))
         ]
-    (doseq [child children] (page doc child))
+    (doseq [child children] (page doc child opts))
     doc))
 
 (defn make-linear-gradient [doc {[x1 y1 x2 y2] :points stops :stops}]

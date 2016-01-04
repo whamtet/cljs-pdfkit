@@ -19,3 +19,11 @@
 
 (defn capitalize-map [m]
   (key-map #(-> % name capitalize) m))
+
+(defn cumul
+  "cumulation of seq"
+  [s]
+  (reduce
+   (fn [[sum done] new]
+     (conj done (+ sum new)))
+   [0 []] s))
