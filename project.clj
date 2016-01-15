@@ -5,7 +5,7 @@
                  [org.clojure/clojurescript "1.7.170" :classifier "aot"
                   :exclusion [org.clojure/data.json]]
                  [org.clojure/data.json "0.2.6" :classifier "aot"]
-                 ;[redlobster "0.2.2-SNAPSHOT"]
+                 [redlobster "0.2.2-SNAPSHOT"]
                  ]
   :jvm-opts ^:replace ["-Xmx1g" "-server"]
   :plugins [[lein-npm "0.6.1"]]

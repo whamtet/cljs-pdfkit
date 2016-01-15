@@ -7,7 +7,7 @@
 ;;and correctly apply fonts etc
 
 (defn unravel-vector [v]
-  (vec (mapcat #(remove seq? (tree-seq seq? identity %)) v)))
+  (vec (mapcat #(remove (fn [x] (or (seq? x) (not x))) (tree-seq seq? identity %)) v)))
 
 (defn element-tag? [v]
   (and (vector? v) (keyword? (first v))))

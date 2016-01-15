@@ -1,12 +1,14 @@
 (ns cljs-pdfkit.test
   (:require
    [cljs-pdfkit.core :as core]
-;   [redlobster.stream :as stream]
+   [redlobster.stream :as stream]
    [cljs-pdfkit.optimize-dom :as optimize-dom]
    [clojure.string :as string]
+   cljs.nodejs
    ))
 
 ;;generate test pdf
+(cljs.nodejs/enable-util-print!)
 
 (defn main []
   (println "in main"))
@@ -14,7 +16,7 @@
 (set! *main-cli-fn* main)
 
 ;;needed for testing
-#_(defn test-pdf [form]
+(defn test-pdf [form]
   (let [doc (core/pdf form)]
     (.pipe doc (stream/write-file "test.pdf"))
     (.end doc)))
@@ -29,6 +31,7 @@
         :subject "Mrr"
         :keywords "Wump"}
   [:page
+   (list nil)
    [:path {:translate [10 0]} "M 0,20 L 100,160 Q 130,200 150,120 C 190,-40 200,200 300,150 L 400,90"]]
   [:page
    [:circle {:dash [5 {:space 10}]} 100 100 50]]
