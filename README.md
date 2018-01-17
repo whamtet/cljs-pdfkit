@@ -8,8 +8,7 @@ Clojurescript wrapper around [pdfkit](http://pdfkit.org/) to generate pdfs in th
 
 ## Usage
 ```clojure
-(let [
-      document
+(let [document
       (cljs-pdfkit.core/pdf
        [:pdf {:info
                {:title "My Document"
