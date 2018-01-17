@@ -22,16 +22,16 @@ Clojurescript wrapper around [pdfkit](http://pdfkit.org/) to generate pdfs in th
 
   (cond
 
-   save-to-file?
-   (.pipe doc (js/fs.createWriteStream "/path/to/file.pdf"))
+    save-to-file?
+    (.pipe doc (js/fs.createWriteStream "/path/to/file.pdf"))
 
-   write-to-http-response?
-   (.pipe doc res)
+    write-to-http-response?
+    (.pipe doc res)
 
-   write-to-in-browser-blob?
-   (.pipe doc (js/blobStream)))
+    write-to-in-browser-blob?
+    (.pipe doc (js/blobStream)))
 
-  (.end doc) ;don't forget this one
+    (.end doc) ;don't forget this one
   )
 ```
 
